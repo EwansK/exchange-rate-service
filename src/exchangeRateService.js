@@ -13,9 +13,11 @@ const CURRENCY_SERIES = {
 };
 
 let exchangeRatesCache = {
-  rates: { USD: null, EUR: null },
+  rates: { USD: null }, // EUR removed
   lastUpdated: null
 };
+
+const getExchangeRatesCache = () => exchangeRatesCache;
 
 // Helper to parse "dd-mm-yyyy" string to Date object
 const parseDDMMYYYY = (str) => {
@@ -39,7 +41,6 @@ const fetchExchangeRate = async (currency, date) => {
     if (!seriesCode) throw new Error(`Unsupported currency: ${currency}`);
 
     const dateStr = date.toISOString().split('T')[0];
-
     console.log(`Trying ${currency} for date ${dateStr}`);
 
     const response = await axios.get(BCCH_API_URL, {
@@ -58,7 +59,6 @@ const fetchExchangeRate = async (currency, date) => {
       throw new Error(`No data available for ${currency}`);
     }
 
-    // Find observation matching the requested date
     const matchedObs = observations.find(obs => {
       const obsDate = parseDDMMYYYY(obs.indexDateString);
       return obsDate.toISOString().split('T')[0] === dateStr;
@@ -83,8 +83,7 @@ const fetchExchangeRateWithFallback = async (currency) => {
     try {
       return await fetchExchangeRate(currency, date);
     } catch (err) {
-      // If no data, try previous day
-      date.setDate(date.getDate() - 1);
+      date.setDate(date.getDate() - 1); // Try previous day
     }
   }
   throw new Error(`No data available for ${currency} in the past ${maxDaysBack} days`);
@@ -108,4 +107,8 @@ const updateExchangeRates = async () => {
   }
 };
 
-module.exports = { fetchExchangeRate, updateExchangeRates, exchangeRatesCache };
+module.exports = {
+  updateExchangeRates,
+  getExchangeRatesCache,
+  fetchExchangeRate
+};

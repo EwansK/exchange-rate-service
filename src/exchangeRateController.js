@@ -1,47 +1,61 @@
 const { updateExchangeRates, exchangeRatesCache } = require('./exchangeRateService');
 
-   const getExchangeRates = async (req, res) => {
-     try {
-       if (!exchangeRatesCache.lastUpdated) {
-         await updateExchangeRates();
-       }
-       res.json({
-         rates: exchangeRatesCache.rates,
-         lastUpdated: exchangeRatesCache.lastUpdated
-       });
-     } catch (error) {
-       res.status(500).json({ error: 'Failed to fetch exchange rates' });
-     }
-   };
+// Helper to avoid excessive refreshes
+const isStale = (lastUpdated) => {
+  const now = new Date();
+  const diffInSeconds = (now - new Date(lastUpdated)) / 1000;
+  return diffInSeconds > 60; // Refresh if last update was over 60 seconds ago
+};
 
-   const convertAmount = async (req, res) => {
-     const { amount, currency } = req.query;
+const getExchangeRates = async (req, res) => {
+  console.log('[GET /api/exchange-rates] Request received at', new Date().toISOString());
 
-     if (!amount || isNaN(amount) || !currency || !['USD', 'EUR'].includes(currency)) {
-       return res.status(400).json({ error: 'Invalid amount or currency' });
-     }
+  try {
+    if (!exchangeRatesCache.lastUpdated || isStale(exchangeRatesCache.lastUpdated)) {
+      await updateExchangeRates();
+    }
+    res.json({
+      rates: exchangeRatesCache.rates,
+      lastUpdated: exchangeRatesCache.lastUpdated
+    });
+  } catch (error) {
+    console.error('Error in getExchangeRates:', error.message);
+    res.status(500).json({ error: 'Failed to fetch exchange rates' });
+  }
+};
 
-     try {
-       if (!exchangeRatesCache.lastUpdated) {
-         await updateExchangeRates();
-       }
+const convertAmount = async (req, res) => {
+  console.log('[GET /api/exchange-rates/convert] Request received at', new Date().toISOString());
 
-       const rate = exchangeRatesCache.rates[currency];
-       if (!rate) {
-         return res.status(500).json({ error: `No rate available for ${currency}` });
-       }
+  const { amount, currency } = req.query;
 
-       const convertedAmount = Math.round(parseFloat(amount) / rate);
-       res.json({
-         originalAmount: parseFloat(amount),
-         currency,
-         convertedAmount,
-         rate,
-         lastUpdated: exchangeRatesCache.lastUpdated
-       });
-     } catch (error) {
-       res.status(500).json({ error: 'Failed to convert amount' });
-     }
-   };
+  if (!amount || isNaN(amount) || !currency || !['USD', 'EUR'].includes(currency)) {
+    return res.status(400).json({ error: 'Invalid amount or currency' });
+  }
 
-   module.exports = { getExchangeRates, convertAmount };
+  try {
+    if (!exchangeRatesCache.lastUpdated || isStale(exchangeRatesCache.lastUpdated)) {
+      await updateExchangeRates();
+    }
+
+    const rate = exchangeRatesCache.rates[currency];
+    if (!rate) {
+      return res.status(500).json({ error: `No rate available for ${currency}` });
+    }
+
+    const convertedAmount = Math.round(parseFloat(amount) / rate);
+    res.json({
+      originalAmount: parseFloat(amount),
+      currency,
+      convertedAmount,
+      rate,
+      lastUpdated: exchangeRatesCache.lastUpdated
+    });
+  } catch (error) {
+    console.error('Error in convertAmount:', error.message);
+    res.status(500).json({ error: 'Failed to convert amount' });
+  }
+};
+
+module.exports = { getExchangeRates, convertAmount };
+
