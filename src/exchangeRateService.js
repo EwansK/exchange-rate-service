@@ -9,11 +9,11 @@ const BCCH_PASS = process.env.BCCH_API_PASS;
 
 const CURRENCY_SERIES = {
   USD: 'F073.TCO.PRE.Z.D', // Daily USD exchange rate
-  // EUR: 'F073.TCO.PRE.EUR.D' // Daily EUR exchange rate
+  // EUR: 'F073.TCO.PRE.EUR.D' // Daily EUR exchange rate (commented out)
 };
 
 let exchangeRatesCache = {
-  rates: { USD: null }, // EUR removed
+  rates: { USD: null }, // EUR removed as per your code
   lastUpdated: null
 };
 
@@ -96,10 +96,10 @@ const updateExchangeRates = async () => {
     for (const currency of Object.keys(CURRENCY_SERIES)) {
       rates[currency] = await fetchExchangeRateWithFallback(currency);
     }
-    exchangeRatesCache = {
-      rates,
-      lastUpdated: new Date()
-    };
+    // Instead of reassigning exchangeRatesCache, mutate its properties:
+    exchangeRatesCache.rates = rates;
+    exchangeRatesCache.lastUpdated = new Date();
+
     console.log('Exchange rates updated:', exchangeRatesCache);
     return exchangeRatesCache;
   } catch (error) {

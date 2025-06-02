@@ -1,4 +1,4 @@
-const { updateExchangeRates, exchangeRatesCache } = require('./exchangeRateService');
+const { updateExchangeRates, getExchangeRatesCache } = require('./exchangeRateService');
 
 // Helper to avoid excessive refreshes
 const isStale = (lastUpdated) => {
@@ -11,9 +11,13 @@ const getExchangeRates = async (req, res) => {
   console.log('[GET /api/exchange-rates] Request received at', new Date().toISOString());
 
   try {
+    let exchangeRatesCache = getExchangeRatesCache();
+
     if (!exchangeRatesCache.lastUpdated || isStale(exchangeRatesCache.lastUpdated)) {
       await updateExchangeRates();
+      exchangeRatesCache = getExchangeRatesCache(); // refresh cache after update
     }
+
     res.json({
       rates: exchangeRatesCache.rates,
       lastUpdated: exchangeRatesCache.lastUpdated
@@ -34,8 +38,11 @@ const convertAmount = async (req, res) => {
   }
 
   try {
+    let exchangeRatesCache = getExchangeRatesCache();
+
     if (!exchangeRatesCache.lastUpdated || isStale(exchangeRatesCache.lastUpdated)) {
       await updateExchangeRates();
+      exchangeRatesCache = getExchangeRatesCache(); // refresh cache after update
     }
 
     const rate = exchangeRatesCache.rates[currency];
@@ -58,4 +65,3 @@ const convertAmount = async (req, res) => {
 };
 
 module.exports = { getExchangeRates, convertAmount };
-
